@@ -503,7 +503,7 @@
 
         <div class="field-group">
           <div class="field-label">Dividir em número de cotas <span class="required">*</span></div>
-          <input class="field-input" id="cotas" type="tel" placeholder="Ex: 3" maxlength="4" oninput="this.value=this.value.replace(/\D/g,'')" />
+          <input class="field-input" id="cotas" type="tel" placeholder="Ex: 180" maxlength="4" oninput="this.value=this.value.replace(/\D/g,'')" />
         </div>
       </div>
 
@@ -578,13 +578,31 @@
     cnpj = cnpj.replace(/\D/g, '');
     if (cnpj.length !== 14) return false;
     if (/^(\d)\1{13}$/.test(cnpj)) return false;
-    const calc = (c, n) => {
-      let s = 0, p = n - 7;
-      for (let i = 0; i < c; i++) { s += parseInt(cnpj[i]) * p--; if (p < 2) p = 9; }
-      const r = s % 11;
-      return r < 2 ? 0 : 11 - r;
-    };
-    return calc(12, 5) === parseInt(cnpj[12]) && calc(13, 6) === parseInt(cnpj[13]);
+
+    let tamanho = cnpj.length - 2;
+    let numeros = cnpj.substring(0, tamanho);
+    const digitos = cnpj.substring(tamanho);
+    let soma = 0;
+    let pos = tamanho - 7;
+
+    for (let i = tamanho; i >= 1; i--) {
+      soma += parseInt(numeros.charAt(tamanho - i)) * pos--;
+      if (pos < 2) pos = 9;
+    }
+    let resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11);
+    if (resultado !== parseInt(digitos.charAt(0))) return false;
+
+    tamanho++;
+    numeros = cnpj.substring(0, tamanho);
+    soma = 0;
+    pos = tamanho - 7;
+
+    for (let i = tamanho; i >= 1; i--) {
+      soma += parseInt(numeros.charAt(tamanho - i)) * pos--;
+      if (pos < 2) pos = 9;
+    }
+    resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11);
+    return resultado === parseInt(digitos.charAt(1));
   }
 
   function setRenda(val, el) {
