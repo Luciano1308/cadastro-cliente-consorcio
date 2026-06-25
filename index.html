@@ -374,11 +374,6 @@
           </div>
         </div>
 
-        <div class="field-group">
-          <div class="field-label">Nome completo <span class="required">*</span></div>
-          <input class="field-input" id="nome" type="text" placeholder="Seu nome completo" autocomplete="name" />
-        </div>
-
         <div class="row2">
           <div class="field-group">
             <div class="field-label" id="docLabel">CPF <span class="required">*</span></div>
@@ -388,6 +383,15 @@
             <div class="field-label" id="nascLabel">Data de nascimento <span class="required">*</span></div>
             <input class="field-input" id="nascimento" type="tel" placeholder="DD/MM/AAAA" maxlength="10" oninput="maskDate(this)" />
           </div>
+        </div>
+
+        <div id="cnpjStatus" style="display:none; font-size:12px; color:var(--brand); margin:-10px 0 12px; display:none; align-items:center; gap:6px;">
+          <i class="ti ti-loader" id="cnpjSpinner"></i> <span id="cnpjStatusMsg"></span>
+        </div>
+
+        <div class="field-group">
+          <div class="field-label" id="nomeLabel">Nome completo <span class="required">*</span></div>
+          <input class="field-input" id="nome" type="text" placeholder="Seu nome completo" autocomplete="name" />
         </div>
       </div>
 
@@ -543,19 +547,25 @@
     el.classList.add('selected');
     const lbl = document.getElementById('docLabel');
     const nascLbl = document.getElementById('nascLabel');
+    const nomeLbl = document.getElementById('nomeLabel');
     const inp = document.getElementById('cpf');
     if (val === 'juridica') {
       lbl.innerHTML = 'CNPJ <span class="required">*</span>';
       inp.placeholder = '00.000.000/0001-00';
       inp.maxLength = 18;
       nascLbl.innerHTML = 'Data de constituição <span class="required">*</span>';
+      nomeLbl.innerHTML = 'Razão Social <span class="required">*</span>';
+      document.getElementById('nome').placeholder = 'Razão Social da empresa';
     } else {
       lbl.innerHTML = 'CPF <span class="required">*</span>';
       inp.placeholder = '000.000.000-00';
       inp.maxLength = 14;
       nascLbl.innerHTML = 'Data de nascimento <span class="required">*</span>';
+      nomeLbl.innerHTML = 'Nome completo <span class="required">*</span>';
+      document.getElementById('nome').placeholder = 'Seu nome completo';
     }
     inp.value = '';
+    document.getElementById('cnpjStatus').style.display = 'none';
   }
 
   function validarCPF(cpf) {
@@ -624,8 +634,45 @@
            .replace(/(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
            .replace(/(\d{3})\.(\d{3})(\d)/, '$1.$2/$3')
            .replace(/(\d{4})(\d)/, '$1-$2');
+      if (v.replace(/\D/g,'').length === 14) buscaCNPJ(v.replace(/\D/g,''));
     }
     el.value = v;
+  }
+
+  async function buscaCNPJ(cnpj) {
+    cnpj = cnpj.replace(/\D/g, '');
+    if (!validarCNPJ(cnpj)) return;
+    const status = document.getElementById('cnpjStatus');
+    const msg = document.getElementById('cnpjStatusMsg');
+    status.style.display = 'flex';
+    msg.textContent = 'Consultando CNPJ...';
+    try {
+      const r = await fetch('https://receitaws.com.br/v1/cnpj/' + cnpj);
+      const d = await r.json();
+      if (d.status === 'ERROR') {
+        msg.textContent = '⚠️ CNPJ não encontrado na Receita Federal.';
+        return;
+      }
+      // Razão Social
+      if (d.nome) document.getElementById('nome').value = d.nome;
+      // Data de abertura DD/MM/AAAA
+      if (d.abertura) document.getElementById('nascimento').value = d.abertura;
+      // Endereço
+      if (d.logradouro) document.getElementById('endereco').value = (d.tipo_logradouro ? d.tipo_logradouro + ' ' : '') + d.logradouro;
+      if (d.numero) document.getElementById('numero').value = d.numero;
+      if (d.complemento) document.getElementById('complemento').value = d.complemento;
+      if (d.bairro) document.getElementById('bairro').value = d.bairro;
+      if (d.municipio) document.getElementById('cidade').value = d.municipio;
+      if (d.uf) document.getElementById('estado').value = d.uf;
+      if (d.cep) {
+        const cepFmt = d.cep.replace(/\D/g,'');
+        document.getElementById('cep').value = cepFmt.slice(0,5) + '-' + cepFmt.slice(5);
+      }
+      msg.textContent = '✅ Dados preenchidos automaticamente!';
+      setTimeout(() => { status.style.display = 'none'; }, 3000);
+    } catch(e) {
+      msg.textContent = '⚠️ Não foi possível consultar. Preencha manualmente.';
+    }
   }
 
   function maskDate(el) {
