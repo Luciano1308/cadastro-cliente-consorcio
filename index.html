@@ -647,18 +647,21 @@
     status.style.display = 'flex';
     msg.textContent = 'Consultando CNPJ...';
     try {
-      const r = await fetch('https://receitaws.com.br/v1/cnpj/' + cnpj);
+      const r = await fetch('https://brasilapi.com.br/api/cnpj/v1/' + cnpj);
       const d = await r.json();
-      if (d.status === 'ERROR') {
+      if (d.message || !d.razao_social) {
         msg.textContent = '⚠️ CNPJ não encontrado na Receita Federal.';
         return;
       }
       // Razão Social
-      if (d.nome) document.getElementById('nome').value = d.nome;
+      if (d.razao_social) document.getElementById('nome').value = d.razao_social;
       // Data de abertura DD/MM/AAAA
-      if (d.abertura) document.getElementById('nascimento').value = d.abertura;
+      if (d.data_inicio_atividade) {
+        const p = d.data_inicio_atividade.split('-');
+        document.getElementById('nascimento').value = p[2] + '/' + p[1] + '/' + p[0];
+      }
       // Endereço
-      if (d.logradouro) document.getElementById('endereco').value = (d.tipo_logradouro ? d.tipo_logradouro + ' ' : '') + d.logradouro;
+      if (d.logradouro) document.getElementById('endereco').value = (d.descricao_tipo_de_logradouro ? d.descricao_tipo_de_logradouro + ' ' : '') + d.logradouro;
       if (d.numero) document.getElementById('numero').value = d.numero;
       if (d.complemento) document.getElementById('complemento').value = d.complemento;
       if (d.bairro) document.getElementById('bairro').value = d.bairro;
